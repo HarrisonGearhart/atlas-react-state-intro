@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 
+const PAGE_SIZE = 5;
+
 export default function SchoolCatalog() {
   const [courses, setCourses] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState({ column: null, direction: "asc" });
+  const [page, setPage] = useState(1);
 
   // Fetch courses on component mount
   useEffect(() => {
@@ -19,7 +22,7 @@ export default function SchoolCatalog() {
     fetchCourses();
   }, []);
 
-  // Handle sorting when header clicked
+  // Handle sorting
   const handleSortClick = (column) => {
     setSortConfig((prev) => {
       if (prev.column === column) {
@@ -29,16 +32,17 @@ export default function SchoolCatalog() {
     });
   };
 
-  // Filter courses based on search query
+  // Filter by search query
   const filterCourses = (courseList) => {
     if (!searchQuery) return courseList;
-    return courseList.filter((course) =>
-      course.courseNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.courseName?.toLowerCase().includes(searchQuery.toLowerCase())
+    return courseList.filter(
+      (course) =>
+        course.courseNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.courseName?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
 
-  // Sort courses based on sortConfig
+  // Sort courses
   const sortCourses = (courseList) => {
     const { column, direction } = sortConfig;
     if (!column) return courseList;
@@ -56,7 +60,14 @@ export default function SchoolCatalog() {
     });
   };
 
-  const displayedCourses = sortCourses(filterCourses(courses));
+  // Combine filter + sort
+  const processedCourses = sortCourses(filterCourses(courses));
+
+  // Pagination logic
+  const startIndex = (page - 1) * PAGE_SIZE;
+  const currentPage = processedCourses.slice(startIndex, startIndex + PAGE_SIZE);
+  const hasNext = processedCourses.length > page * PAGE_SIZE;
+  const hasPrev = page > 1;
 
   return (
     <div className="school-catalog">
@@ -67,7 +78,10 @@ export default function SchoolCatalog() {
         type="text"
         placeholder="Search courses"
         value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
+        onChange={(e) => {
+          setSearchQuery(e.target.value);
+          setPage(1); // Reset page when search changes
+        }}
       />
 
       {/* Courses table */}
@@ -83,7 +97,7 @@ export default function SchoolCatalog() {
           </tr>
         </thead>
         <tbody>
-          {displayedCourses.map((course, index) => (
+          {currentPage.map((course, index) => (
             <tr key={index}>
               <td>{course.trimester}</td>
               <td>{course.courseNumber}</td>
@@ -98,10 +112,15 @@ export default function SchoolCatalog() {
         </tbody>
       </table>
 
-      {/* Pagination placeholder */}
+      {/* Pagination */}
       <div className="pagination">
-        <button>Previous</button>
-        <button>Next</button>
+        <button disabled={!hasPrev} onClick={() => setPage(page - 1)}>
+          Previous
+        </button>
+        <span> Page {page} </span>
+        <button disabled={!hasNext} onClick={() => setPage(page + 1)}>
+          Next
+        </button>
       </div>
     </div>
   );
